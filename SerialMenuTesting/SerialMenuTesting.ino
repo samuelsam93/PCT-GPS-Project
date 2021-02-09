@@ -4,17 +4,48 @@
 BLEUart bleuart; // uart over ble
 #define GPSerial Serial1
 Adafruit_GPS GPS(&GPSerial);
+#include <SPI.h>
+#include <SdFat.h>
+#include <Adafruit_SPIFlash.h>
 
 int menu = 0;
 bool isDumping = 0;
-int dumpStart;
+const int buttonPin = 7;
+int buttonState = 0;
+File dataFile;
+
+#if defined(EXTERNAL_FLASH_USE_QSPI)
+  Adafruit_FlashTransport_QSPI flashTransport;
+#else
+  #error No QSPI/SPI flash are defined on your board variant.h !
+#endif
+
+Adafruit_SPIFlash flash(&flashTransport);
+
+FatFileSystem fatfs;
+
+#define FILE_NAME      "GPSdata.txt"
+
 
 void setup() {
-  while(!Serial) ;  //wait until serial is ready
-  
+  pinMode(buttonPin, INPUT_PULLUP);
   Serial.begin(115200);
-  Serial.setTimeout(10);
-  delay(1000);
+
+  while(!Serial) {}  //wait until serial is ready
+
+  if (!flash.begin()) {
+    Serial.println("Error, failed to initialize flash chip!");
+    while(1);
+  }
+
+  if (!fatfs.begin(&flash)) {
+    Serial.println("Error, failed to mount newly formatted filesystem!");
+    Serial.println("Was the flash chip formatted with the fatfs_format example?");
+    while(1);
+  }
+
+  Serial.println("Mounted filesystem!");
+  
   GPS.begin(9600);
 
   //initialize GPS settings
@@ -78,6 +109,18 @@ void streamData5Seconds(void) {
 
 
 void loop() {
+  buttonState = digitalRead(buttonPin);
+  if (buttonState == LOW) {
+    menu = 0;
+    Serial.println("BUTTON PRESS");
+
+    if (dataFile) {
+      dataFile.close();
+    }
+
+    //RMC sentences only
+    GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
+  }
   if (menu == 0) {
     Serial.println("Select an option:");
     Serial.println("-----------------");
@@ -86,6 +129,8 @@ void loop() {
     Serial.println("3) Stop logging");
     Serial.println("4) Print Logger Status");
     Serial.println("5) Dump Logger Contents to Serial Monitor");
+    Serial.println("6) Dump Logger Contents to SPI Flash");
+    
 
 //    upcoming menu items
 //    Serial.println("a) Start BLE Advertising");
@@ -142,40 +187,30 @@ void loop() {
       GPS.sendCommand("$PMTK622,1*29");
       Serial.println("------------------------------");
       isDumping = 1;
-      dumpStart = millis();
     } else {
-      while (millis() < dumpStart + 5000) {
-        if (GPSerial.available()) {
-          char c = GPSerial.read();
-          Serial.write(c);
-        }
+      if (GPSerial.available()) {
+        char c = GPSerial.read();
+        Serial.write(c);
       }
-      if (Serial.peek() == -1) {
-        Serial.println("here");
-        menu = 0;
-        isDumping = 0;
-      } else {
-        Serial.print("elsehere");
-        Serial.print(Serial.peek());
-        dumpStart = millis();
-      }
-//      if (Serial.findUntil("$PMTK001,622,3*36", ",")) {
-//        menu = 0;
-//        isDumping = 0;
-//      }
     }
   }
 
   if (menu == 6) {
-    Serial.println("in menu 6");
-//    GPS.sendCommand("$PMTK622,1*29");
-//    if (GPSerial.available()) {
-//      char c = GPSerial.read();
-//      Serial.write(c);
-//      bleuart.write(c);
-//    }
-//    if (Serial.available()) {
-//      menu = Serial.parseInt();  
-//    }
+    if (!isDumping) {
+      Serial.println("in menu 6");
+      GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_OFF);
+      while(GPS.available())
+        GPSerial.read();
+      dataFile = fatfs.open(FILE_NAME, FILE_WRITE);
+      GPS.sendCommand("$PMTK622,1*29");
+      Serial.println("------------------------------");
+      isDumping = 1;
+    } else {
+      if (GPSerial.available()) {
+        char c = GPSerial.read();
+        Serial.write(c);
+        dataFile.print(c);
+      }
+    }
   }
 }
