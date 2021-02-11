@@ -1,0 +1,9 @@
+100235 Bytes in GPSdata.log rn out of 2MB is ~5%
+this is about 10 hours of data at full logging speed
+which means we're at about 8.3 days of data storage available on QSPI at full speed
+plus if we account for the full storage of the data logger, we are currently at 30% of data logger storage
+3.3 x 10 hours gives us another 33 hours gets us to 9.68 days
+This would get us dangerously close to overflowing, 
+but we're at almost 10 days of storing data every 15 seconds
+if we clock the gps to only start recording data for 2 minutes every 10 minutes,
+that will multiply our storage time by about 5 getting us to 50 days which is a passable threshold
