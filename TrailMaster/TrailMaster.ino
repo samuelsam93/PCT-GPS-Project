@@ -46,7 +46,7 @@ void startLogger(void){
   while (!GPS.LOCUS_ReadStatus()) {}
   if (!GPS.LOCUS_status) {
     while (!GPS.LOCUS_StartLogger()) {}      
-  }  
+  }
 }
 
 void sendDone(void) {
