@@ -19,7 +19,7 @@ void setup() {
 //  lc.setThermistorB(3950);
 //  Serial.print("Thermistor B = "); Serial.println(lc.getThermistorB());
 
-  lc.setPackSize(LC709203F_APA_100MAH);
+  lc.setPackSize(LC709203F_APA_500MAH);
 
   startTime  = millis();
   Serial.print("Start TIME:"); Serial.println(startTime);

@@ -8,6 +8,7 @@ bool GPS_enabled = 1;
 bool fixFound = 0;
 int totalFixesSinceStart = 0;
 int initTime;
+int totalSearchTime = 0;
 
 #define ONE_MINUTE          60000
 #define TWO_MINUTES         120000
@@ -21,6 +22,8 @@ int initTime;
 
 
 void setup() {
+  pinMode(11, OUTPUT);
+  digitalWrite(11, LOW);
   initTime = millis();
   pinMode(9, OUTPUT);
 
@@ -100,18 +103,18 @@ void lowPowerWait(bool foundFix, bool logToSerial) {
   disableGPS();
   long startTime = millis();
   if (!foundFix) {
-    while(millis() < startTime + ONE_HOUR) {
-//      if (logToSerial) {
-//        Serial.print("NO FIX; disabled "); Serial.print((millis()-startTime)/1000); Serial.println("s");
-//        delay(5000);
-//      }
+    while(millis() < startTime + ONE_MINUTE) {
+      if (logToSerial) {
+        Serial.print("NO FIX; disabled "); Serial.print((millis()-startTime)/1000); Serial.println("s");
+        delay(5000);
+      }
     }
   } else {
-    while(millis() < startTime + ONE_HOUR) {
-//      if (logToSerial) {
-//        Serial.print("FIX FOUND; disabled "); Serial.print((millis()-startTime)/1000); Serial.println("s");
-//        delay(5000);
-//      }
+    while(millis() < startTime + ONE_MINUTE) {
+      if (logToSerial) {
+        Serial.print("FIX FOUND; disabled "); Serial.print((millis()-startTime)/1000); Serial.println("s");
+        delay(5000);
+      }
     }
   }
 }
@@ -120,11 +123,11 @@ void loop() {
   if (GPS_enabled) {
     enableGPS();
     startLogger();
-    fixFound = waitForFix(2, false);
+    fixFound = waitForFix(2, true);
 
     GPS_enabled = 0;
   } else {
-    lowPowerWait(fixFound, false);
+    lowPowerWait(fixFound, true);
     GPS_enabled = 1;
   }
 }
